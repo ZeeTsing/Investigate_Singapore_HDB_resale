@@ -9,17 +9,17 @@ def response_hook(resp, *args, **kwargs):
     else:
         responses[resp.status_code].append([resp.url])
 
-def fetch_url (url_path,name):
+def fetch_url (url_path, name, headers=None,workers=50):
     '''The function takes in a list of url and fetch accordingly;
     It returns three files: "success_name.txt", "failure_name.txt" and "done_name.txt"
     information fetched is stored in success and failure stores urls that failed to be fetched
     done stores the list of url that was successfully fetched '''
     hooks = { 'response' : response_hook }
-    with FuturesSession(max_workers=1000) as session:
+    with FuturesSession(max_workers=workers) as session:
         futures = []
         with open(url_path) as url_file:
             for url in url_file:
-                futures.append(session.get(url[:-1]))
+                futures.append(session.get(url[:-1], headers=headers))
 
         done = 0
         success = 0
@@ -31,11 +31,11 @@ def fetch_url (url_path,name):
                         resp = future.result()
                         done_file.write("{}\n".format(resp.url))
 
-                        if resp.status_code == 200:
+                        if resp.status_code == 200 and len(resp.text) > 49:
                             success_file.write('{"url": ' +str(resp.url)+ ', "text": ' +resp.text+ '}\n')
                             success += 1
                         else:
-                            failure_file.write("{}\n".format(resp.url))
+                            failure_file.write('{"url": ' +str(resp.url)+ ', "error": ' +str(resp.status_code)+ '}\n')
                             failure += 1
 
                         done += 1
